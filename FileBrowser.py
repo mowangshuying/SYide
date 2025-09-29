@@ -27,6 +27,9 @@ class FileBrowser(QWidget):
         # self.fileTree.itemDoubleClicked.connect(self.onItemDoubleClicked)
         self.fileTree.itemClicked.connect(self.onItemClicked)
         
+        # 添加键盘事件处理
+        self.fileTree.keyPressEvent = self.treeKeyPressEvent
+        
         # 添加到布局
         layout.addWidget(self.fileTree)
         
@@ -34,6 +37,72 @@ class FileBrowser(QWidget):
         self.currentPath = QDir.currentPath()
         self.loadRootDirectory()
         
+    def treeKeyPressEvent(self, event):
+        """处理文件树的键盘按键事件"""
+        if event.key() == Qt.Key_F2:
+            self.renameSelectedItem()
+        elif event.key() == Qt.Key_Delete:
+            self.deleteSelectedItem()
+        else:
+            # 调用原始的keyPressEvent处理其他按键
+            QTreeWidget.keyPressEvent(self.fileTree, event)
+            
+    def deleteSelectedItem(self):
+        """删除选中的项目"""
+        currentItem = self.fileTree.currentItem()
+        if not currentItem:
+            return
+            
+        path = currentItem.data(0, Qt.UserRole)
+        if not os.path.exists(path):
+            return
+            
+        # 获取项目名称
+        name = currentItem.text(0)
+        
+        # 确认删除
+        reply = QMessageBox.question(
+            self, 
+            "确认删除", 
+            f"确定要删除 '{name}' 吗？\n此操作不可撤销。",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                # 执行删除
+                if os.path.isfile(path):
+                    os.remove(path)
+                elif os.path.isdir(path):
+                    # 递归删除目录
+                    self.removeDirectory(path)
+                    
+                # 从树中移除项目
+                parent = currentItem.parent()
+                if parent:
+                    parent.removeChild(currentItem)
+                else:
+                    index = self.fileTree.indexOfTopLevelItem(currentItem)
+                    if index >= 0:
+                        self.fileTree.takeTopLevelItem(index)
+                        
+                self.renameCompleted.emit(f"已删除: {name}")
+            except Exception as e:
+                QMessageBox.warning(self, "错误", f"删除失败: {str(e)}")
+                
+    def removeDirectory(self, path):
+        """
+        递归删除目录
+        :param path: 目录路径
+        """
+        try:
+            # 使用shutil.rmtree更安全地删除目录
+            import shutil
+            shutil.rmtree(path)
+        except Exception as e:
+            raise Exception(f"无法删除目录 {path}: {str(e)}")
+            
     def renameSelectedItem(self):
         """重命名选中的项目"""
         currentItem = self.fileTree.currentItem()
@@ -139,14 +208,6 @@ class FileBrowser(QWidget):
         # elif os.path.isdir(path):
             # self.fileTree.expandItem(item)
         
-    def keyPressEvent(self, event):
-        """处理键盘按键事件"""
-        if event.key() == Qt.Key_F2:
-            self.renameSelectedItem()
-        else:
-            # 调用父类的事件处理
-            super().keyPressEvent(event)
-    
     # def onItemDoubleClicked(self, item, column):
     #     """
     #     处理项目双击事件
@@ -172,6 +233,11 @@ class FileBrowser(QWidget):
         renameAction = QAction("重命名", self)
         renameAction.triggered.connect(self.renameSelectedItem)
         menu.addAction(renameAction)
+        
+        # 添加删除选项到上下文菜单
+        deleteAction = QAction("删除", self)
+        deleteAction.triggered.connect(self.deleteSelectedItem)
+        menu.addAction(deleteAction)
         
         menu.addSeparator()
         
@@ -247,5 +313,5 @@ class FileBrowser(QWidget):
         """
         if os.path.exists(path):
             self.currentPath = path
-            # self.pathEdit.setText(path)
             self.loadRootDirectory()
+
