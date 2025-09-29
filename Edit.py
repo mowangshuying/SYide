@@ -5,6 +5,8 @@ class Edit(QsciScintilla):
     def __init__(self):
         super().__init__()
         
+        
+        
         # 支持显示行号
         self.setMarginType(0, QsciScintilla.SC_MARGIN_NUMBER)
         self.setMarginLineNumbers(0, True)
