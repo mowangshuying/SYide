@@ -1,0 +1,12 @@
+{
+    "editor.mouseWheelZoom": true,
+    "formatFiles.excludedFolders": [
+        "node_modules",
+        ".vscode",
+        ".git",
+        "dist",
+        ".chrome",
+        ".venv",
+        "_rc"
+    ]
+}
