@@ -1,4 +1,4 @@
-# .PyQtWeChat
+# .SYide
 
 ## Requirement
 
