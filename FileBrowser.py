@@ -8,6 +8,7 @@ class FileBrowser(QWidget):
     # fileDoubleClicked = pyqtSignal(str)
     
     openFile = pyqtSignal(str)
+    renameCompleted = pyqtSignal(str)  # 添加重命名完成信号
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,6 +34,51 @@ class FileBrowser(QWidget):
         self.currentPath = QDir.currentPath()
         self.loadRootDirectory()
         
+    def renameSelectedItem(self):
+        """重命名选中的项目"""
+        currentItem = self.fileTree.currentItem()
+        if not currentItem:
+            return
+            
+        path = currentItem.data(0, Qt.UserRole)
+        if not os.path.exists(path):
+            return
+            
+        # 使用QInputDialog来获取新名称
+        oldName = currentItem.text(0)
+        newName, ok = QInputDialog.getText(self, "重命名", "新名称:", QLineEdit.Normal, oldName)
+        
+        if not ok or not newName:
+            return  # 用户取消或输入空名称
+            
+        # 检查名称是否与原名称相同
+        if newName == oldName:
+            return
+            
+        # 检查名称是否合法
+        if "/" in newName or "\\" in newName or ":" in newName or "*" in newName or "?" in newName or "\"" in newName or "<" in newName or ">" in newName or "|" in newName:
+            QMessageBox.warning(self, "错误", "文件名不能包含以下字符: / \\ : * ? \" < > |")
+            return
+            
+        # 构造新路径
+        dirPath = os.path.dirname(path)
+        newPath = os.path.join(dirPath, newName)
+        
+        # 检查同名文件/文件夹是否已存在
+        if os.path.exists(newPath):
+            QMessageBox.warning(self, "错误", f"文件或文件夹 '{newName}' 已存在")
+            return
+            
+        # 执行重命名
+        try:
+            os.rename(path, newPath)
+            # 更新项目文本和数据
+            currentItem.setText(0, newName)
+            currentItem.setData(0, Qt.UserRole, newPath)
+            self.renameCompleted.emit(f"已重命名: {oldName} -> {newName}")
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"重命名失败: {str(e)}")
+            
     def loadRootDirectory(self):
         """
         加载根目录
@@ -93,6 +139,13 @@ class FileBrowser(QWidget):
         # elif os.path.isdir(path):
             # self.fileTree.expandItem(item)
         
+    def keyPressEvent(self, event):
+        """处理键盘按键事件"""
+        if event.key() == Qt.Key_F2:
+            self.renameSelectedItem()
+        else:
+            # 调用父类的事件处理
+            super().keyPressEvent(event)
     
     # def onItemDoubleClicked(self, item, column):
     #     """
@@ -115,6 +168,13 @@ class FileBrowser(QWidget):
         path = item.data(0, Qt.UserRole)
         menu = QMenu()
         
+        # 添加重命名选项到上下文菜单
+        renameAction = QAction("重命名", self)
+        renameAction.triggered.connect(self.renameSelectedItem)
+        menu.addAction(renameAction)
+        
+        menu.addSeparator()
+        
         if os.path.isdir(path):
             openInTerminalAction = QAction("在终端中打开", self)
             openInTerminalAction.triggered.connect(lambda: self.openInTerminal(path))
@@ -122,6 +182,11 @@ class FileBrowser(QWidget):
             
             menu.addSeparator()
             
+        # 打开文件所在目录，UI显示
+        showInExplorerAction = QAction("在资源管理器中打开", self)
+        showInExplorerAction.triggered.connect(lambda: os.startfile(os.path.dirname(path)))
+        menu.addAction(showInExplorerAction)
+
         copyPathAction = QAction("复制路径", self)
         copyPathAction.triggered.connect(lambda: self.copyPath(path))
         menu.addAction(copyPathAction)
