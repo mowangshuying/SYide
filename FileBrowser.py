@@ -247,5 +247,5 @@ class FileBrowser(QWidget):
         """
         if os.path.exists(path):
             self.currentPath = path
-            self.pathEdit.setText(path)
+            # self.pathEdit.setText(path)
             self.loadRootDirectory()
