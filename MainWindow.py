@@ -4,6 +4,7 @@ from PyQt5.QtGui import *
 
 from Edit import Edit
 from FileBrowser import FileBrowser
+from OutputWindow import OutputWindow
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -11,6 +12,7 @@ class MainWindow(QMainWindow):
         
         self.tabWidget = None
         self.edit = None
+        self.outputWindow = None
         
         self.__initMenuBar()
         self.__initUI()
@@ -134,6 +136,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("")
         
     def __initDocker(self):
+        # 文件浏览器
         self.fileBrowser = FileBrowser()
         self.fileBrowser.openFile.connect(self.__onOpenFileDirect)
         self.fileBrowser.renameCompleted.connect(self.onRenameCompleted)
@@ -142,6 +145,10 @@ class MainWindow(QMainWindow):
         self.fileBrowserDock = QDockWidget("File Browser", self)
         self.fileBrowserDock.setWidget(self.fileBrowser)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.fileBrowserDock)
+        
+        # 输出窗口
+        self.outputWindow = OutputWindow()
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.outputWindow)
         
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
         self.setCorner(Qt.TopLeftCorner, Qt.LeftDockWidgetArea)
@@ -154,15 +161,24 @@ class MainWindow(QMainWindow):
         :param message: 状态消息
         """
         self.statusBar().showMessage(message)
+        # 同时在输出窗口中显示
+        if self.outputWindow:
+            self.outputWindow.appendText(message)
         
     def __onOpenFile(self):
         fileName = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Text Files (*.txt)")
         
         if fileName[0]:
             self.openFileInTab(fileName[0])
+            # 在输出窗口中记录日志
+            if self.outputWindow:
+                self.outputWindow.appendText(f"Opened file: {fileName[0]}")
                 
     def __onOpenFileDirect(self, path):
         self.openFileInTab(path)
+        # 在输出窗口中记录日志
+        if self.outputWindow:
+            self.outputWindow.appendText(f"Opened file: {path}")
             
     def __onOpenFolder(self):
         folderName = QFileDialog.getExistingDirectory(self, "Open Folder", "")
@@ -171,3 +187,6 @@ class MainWindow(QMainWindow):
             self.fileBrowser.setRootPath(folderName)
             self.fileBrowser.loadRootDirectory()
             self.statusBar().showMessage("Opened " + folderName)
+            # 在输出窗口中记录日志
+            if self.outputWindow:
+                self.outputWindow.appendText(f"Opened folder: {folderName}")
