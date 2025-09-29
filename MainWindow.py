@@ -1,3 +1,5 @@
+import os
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -37,6 +39,10 @@ class MainWindow(QMainWindow):
         
         saveAction = QAction("Save", self)
         fileMenu.addAction(saveAction)
+        saveAction.setShortcut("Ctrl+S")
+        saveAction.triggered.connect(self.__onSaveFile)
+        
+        fileMenu.addSeparator()
         
         exitAction = QAction("Exit", self)
         fileMenu.addAction(exitAction)
@@ -67,7 +73,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabWidget)
         
         # 创建第一个默认编辑器标签页
-        self.createTab("Untitled")
+        # self.createTab("Untitled")
         
         self.setWindowTitle("@SYide")
         self.resize(1000, 750)
@@ -81,6 +87,13 @@ class MainWindow(QMainWindow):
         """
         editor = Edit()
         editor.breakpointToggled.connect(self.onBreakpointToggled)
+        editor.fileSaved.connect(self.onFileSaved)
+        editor.runPythonFile.connect(self.onRunPythonFile)
+        
+        # 设置文件路径
+        if filePath:
+            editor.setFilePath(filePath)
+            
         tabIndex = self.tabWidget.addTab(editor, title)
         self.tabWidget.setCurrentIndex(tabIndex)
         
@@ -124,7 +137,52 @@ class MainWindow(QMainWindow):
                 self.outputWindow.appendInfo(f"Breakpoint added at line {line+1} in {file_name}")
             else:
                 self.outputWindow.appendInfo(f"Breakpoint removed at line {line+1} in {file_name}")
+                
+    def onFileSaved(self, message):
+        """
+        处理文件保存事件
+        :param message: 保存消息
+        """
+        # 在状态栏显示保存消息
+        self.statusBar().showMessage(message)
         
+        # 在输出窗口中显示保存消息
+        if self.outputWindow:
+            self.outputWindow.appendInfo(message)
+            
+    def onRunPythonFile(self, filePath):
+        """
+        处理运行Python文件事件
+        :param filePath: Python文件路径
+        """
+        try:
+            # 确保终端窗口存在
+            if self.terminalWindow:
+                # 切换到终端窗口所在的目录
+                directory = os.path.dirname(filePath)
+                if directory:
+                    os.chdir(directory)
+                    
+                # 在终端中执行Python文件
+                command = f"python \"{filePath}\""
+                self.terminalWindow.executeCommand(command)
+                
+                # 在输出窗口中记录
+                if self.outputWindow:
+                    self.outputWindow.appendInfo(f"Executing: {filePath}")
+            else:
+                # 如果没有终端窗口，使用系统方法执行
+                import subprocess
+                subprocess.Popen(["python", filePath])
+                
+                # 在输出窗口中记录
+                if self.outputWindow:
+                    self.outputWindow.appendInfo(f"Executing: {filePath}")
+        except Exception as e:
+            # 在输出窗口中显示错误
+            if self.outputWindow:
+                self.outputWindow.appendError(f"Failed to execute {filePath}: {str(e)}")
+                
     def openFileInTab(self, filePath):
         """
         在标签页中打开文件
@@ -214,3 +272,11 @@ class MainWindow(QMainWindow):
             # 在输出窗口中记录日志
             if self.outputWindow:
                 self.outputWindow.appendText(f"Opened folder: {folderName}")
+                
+    def __onSaveFile(self):
+        """
+        处理保存文件菜单项
+        """
+        current_editor = self.getCurrentEditor()
+        if current_editor and hasattr(current_editor, 'saveFile'):
+            current_editor.saveFile()

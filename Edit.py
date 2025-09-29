@@ -2,16 +2,20 @@ from PyQt5.Qsci import QsciScintilla
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+import os
 
 class Edit(QsciScintilla):
     # 定义断点切换信号
     breakpointToggled = pyqtSignal(int, bool)  # 行号, 是否设置断点
+    fileSaved = pyqtSignal(str)  # 文件保存信号
+    runPythonFile = pyqtSignal(str)  # 运行Python文件信号
     
     def __init__(self):
         super().__init__()
         
         # 存储断点的集合
         self.breakpoints = set()
+        self.filePath = None  # 文件路径
         
         # 初始化编辑器
         self.__initEditor()
@@ -36,6 +40,10 @@ class Edit(QsciScintilla):
         self.marginClicked.connect(self.onMarginClicked)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenu)
+        
+        # 设置快捷键
+        self.shortcutSave = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.shortcutSave.activated.connect(self.saveFile)
         
     def onMarginClicked(self, margin, line, state):
         """
@@ -84,6 +92,13 @@ class Edit(QsciScintilla):
         toggleBreakpointAction.triggered.connect(lambda checked, l=line_copy: self.toggleBreakpoint(l))
         menu.addAction(toggleBreakpointAction)
         
+        # 如果是Python文件，添加"执行当前文件"选项
+        if self.filePath and self.filePath.lower().endswith('.py'):
+            menu.addSeparator()
+            runPythonAction = QAction("执行当前文件", self)
+            runPythonAction.triggered.connect(self.runPythonScript)
+            menu.addAction(runPythonAction)
+        
         # 显示菜单
         menu.exec_(self.mapToGlobal(position))
         
@@ -131,3 +146,42 @@ class Edit(QsciScintilla):
         :return: 断点行号列表
         """
         return sorted(list(self.breakpoints))
+        
+    def saveFile(self):
+        """
+        保存文件
+        """
+        try:
+            # 如果没有文件路径，则无法保存
+            if not self.filePath:
+                self.fileSaved.emit("Error: No file path specified")
+                return False
+                
+            # 获取编辑器中的文本
+            content = self.text()
+            
+            # 以UTF-8格式保存文件
+            with open(self.filePath, 'w', encoding='utf-8') as f:
+                f.write(content)
+                
+            self.fileSaved.emit(f"File saved: {self.filePath}")
+            return True
+        except Exception as e:
+            self.fileSaved.emit(f"Error saving file: {str(e)}")
+            return False
+            
+    def setFilePath(self, path):
+        """
+        设置文件路径
+        :param path: 文件路径
+        """
+        self.filePath = path
+        
+    def runPythonScript(self):
+        """
+        运行Python脚本
+        """
+        if self.filePath and os.path.exists(self.filePath):
+            self.runPythonFile.emit(self.filePath)
+        else:
+            self.fileSaved.emit("Error: File does not exist")

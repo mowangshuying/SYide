@@ -34,8 +34,8 @@ class FileBrowser(QWidget):
         layout.addWidget(self.fileTree)
         
         # 设置初始目录为当前工作目录
-        self.currentPath = QDir.currentPath()
-        self.loadRootDirectory()
+        self.currentPath = ""
+        # self.loadRootDirectory()
         
     def treeKeyPressEvent(self, event):
         """处理文件树的键盘按键事件"""
@@ -229,6 +229,18 @@ class FileBrowser(QWidget):
         path = item.data(0, Qt.UserRole)
         menu = QMenu()
         
+        # 检查是否为目录，如果是则添加创建文件选项
+        if os.path.isdir(path):
+            createFileAction = QAction("新建文件", self)
+            createFileAction.triggered.connect(lambda: self.createFile(item, path))
+            menu.addAction(createFileAction)
+            
+            createFolderAction = QAction("新建文件夹", self)
+            createFolderAction.triggered.connect(lambda: self.createFolder(item, path))
+            menu.addAction(createFolderAction)
+            
+            menu.addSeparator()
+        
         # 添加重命名选项到上下文菜单
         renameAction = QAction("重命名", self)
         renameAction.triggered.connect(self.renameSelectedItem)
@@ -259,6 +271,87 @@ class FileBrowser(QWidget):
         
         menu.exec_(self.fileTree.viewport().mapToGlobal(position))
         
+    def createFile(self, parentItem, directoryPath):
+        """
+        在指定目录中创建新文件
+        :param parentItem: 父级树项
+        :param directoryPath: 目录路径
+        """
+        # 获取文件名
+        fileName, ok = QInputDialog.getText(self, "新建文件", "文件名:")
+        if not ok or not fileName:
+            return
+            
+        # 检查文件名是否合法
+        if "/" in fileName or "\\" in fileName or ":" in fileName or "*" in fileName or "?" in fileName or "\"" in fileName or "<" in fileName or ">" in fileName or "|" in fileName:
+            QMessageBox.warning(self, "错误", "文件名不能包含以下字符: / \\ : * ? \" < > |")
+            return
+            
+        # 构造完整路径
+        fullPath = os.path.join(directoryPath, fileName)
+        
+        # 检查文件是否已存在
+        if os.path.exists(fullPath):
+            QMessageBox.warning(self, "错误", f"文件 '{fileName}' 已存在")
+            return
+            
+        try:
+            # 创建文件
+            with open(fullPath, 'w') as f:
+                pass  # 创建空文件
+                
+            # 在树中添加新文件项
+            childItem = QTreeWidgetItem(parentItem)
+            childItem.setText(0, fileName)
+            childItem.setData(0, Qt.UserRole, fullPath)
+            childItem.setIcon(0, self.style().standardIcon(QStyle.SP_FileIcon))
+            
+            self.renameCompleted.emit(f"已创建文件: {fileName}")
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"创建文件失败: {str(e)}")
+            
+    def createFolder(self, parentItem, directoryPath):
+        """
+        在指定目录中创建新文件夹
+        :param parentItem: 父级树项
+        :param directoryPath: 目录路径
+        """
+        # 获取文件夹名
+        folderName, ok = QInputDialog.getText(self, "新建文件夹", "文件夹名:")
+        if not ok or not folderName:
+            return
+            
+        # 检查文件夹名是否合法
+        if "/" in folderName or "\\" in folderName or ":" in folderName or "*" in folderName or "?" in folderName or "\"" in folderName or "<" in folderName or ">" in folderName or "|" in folderName:
+            QMessageBox.warning(self, "错误", "文件夹名不能包含以下字符: / \\ : * ? \" < > |")
+            return
+            
+        # 构造完整路径
+        fullPath = os.path.join(directoryPath, folderName)
+        
+        # 检查文件夹是否已存在
+        if os.path.exists(fullPath):
+            QMessageBox.warning(self, "错误", f"文件夹 '{folderName}' 已存在")
+            return
+            
+        try:
+            # 创建文件夹
+            os.makedirs(fullPath)
+                
+            # 在树中添加新文件夹项
+            childItem = QTreeWidgetItem(parentItem)
+            childItem.setText(0, folderName)
+            childItem.setData(0, Qt.UserRole, fullPath)
+            childItem.setIcon(0, self.style().standardIcon(QStyle.SP_DirIcon))
+            
+            # 添加占位符子项使文件夹可以展开
+            placeholder = QTreeWidgetItem(childItem)
+            placeholder.setText(0, "Loading...")
+            
+            self.renameCompleted.emit(f"已创建文件夹: {folderName}")
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"创建文件夹失败: {str(e)}")
+            
     def copyPath(self, path):
         """
         复制路径到剪贴板
@@ -314,4 +407,6 @@ class FileBrowser(QWidget):
         if os.path.exists(path):
             self.currentPath = path
             self.loadRootDirectory()
+
+
 
