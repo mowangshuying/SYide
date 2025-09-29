@@ -5,7 +5,9 @@ import os
 
 class FileBrowser(QWidget):
     # 定义文件双击信号
-    fileDoubleClicked = pyqtSignal(str)
+    # fileDoubleClicked = pyqtSignal(str)
+    
+    openFile = pyqtSignal(str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,7 +23,8 @@ class FileBrowser(QWidget):
         self.fileTree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.fileTree.customContextMenuRequested.connect(self.showContextMenu)
         self.fileTree.itemExpanded.connect(self.loadDirectory)
-        self.fileTree.itemDoubleClicked.connect(self.onItemDoubleClicked)
+        # self.fileTree.itemDoubleClicked.connect(self.onItemDoubleClicked)
+        self.fileTree.itemClicked.connect(self.onItemClicked)
         
         # 添加到布局
         layout.addWidget(self.fileTree)
@@ -79,15 +82,27 @@ class FileBrowser(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "错误", f"无法读取目录: {str(e)}")
             
-    def onItemDoubleClicked(self, item, column):
+    def onItemClicked(self, item, column):
         """
-        处理项目双击事件
+        处理项目点击事件
         """
+        # 获取到文件路径
         path = item.data(0, Qt.UserRole)
         if os.path.isfile(path):
-            self.fileDoubleClicked.emit(path)
-        elif os.path.isdir(path):
-            self.fileTree.expandItem(item)
+            self.openFile.emit(path)
+        # elif os.path.isdir(path):
+            # self.fileTree.expandItem(item)
+        
+    
+    # def onItemDoubleClicked(self, item, column):
+    #     """
+    #     处理项目双击事件
+    #     """
+    #     path = item.data(0, Qt.UserRole)
+    #     if os.path.isfile(path):
+    #         self.fileDoubleClicked.emit(path)
+    #     elif os.path.isdir(path):
+    #         self.fileTree.expandItem(item)
             
     def showContextMenu(self, position):
         """
@@ -169,28 +184,3 @@ class FileBrowser(QWidget):
             self.currentPath = path
             self.pathEdit.setText(path)
             self.loadRootDirectory()
-
-# 使用示例
-if __name__ == "__main__":
-    import sys
-    
-    app = QApplication(sys.argv)
-    
-    # 创建主窗口
-    window = QMainWindow()
-    window.setWindowTitle("文件浏览器")
-    window.resize(400, 600)
-    
-    # 创建文件浏览器
-    fileBrowser = FileBrowser()
-    
-    # 连接文件双击信号
-    def onFileDoubleClicked(filePath):
-        print(f"打开文件: {filePath}")
-        
-    fileBrowser.fileDoubleClicked.connect(onFileDoubleClicked)
-    
-    window.setCentralWidget(fileBrowser)
-    window.show()
-    
-    sys.exit(app.exec_())

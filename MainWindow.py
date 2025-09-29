@@ -62,6 +62,7 @@ class MainWindow(QMainWindow):
         
     def __initDocker(self):
         self.fileBrowser = FileBrowser()
+        self.fileBrowser.openFile.connect(self.__onOpenFileDirect)
         self.fileBrowser.show()
         
         self.fileBrowserDock = QDockWidget("File Browser", self)
@@ -74,6 +75,7 @@ class MainWindow(QMainWindow):
         self.setCorner(Qt.TopRightCorner, Qt.RightDockWidgetArea)
         
     def __onOpenFile(self):
+        
         fileName = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Text Files (*.txt)")
         
         # if fileName.count() != 1:
@@ -84,6 +86,11 @@ class MainWindow(QMainWindow):
                 self.edit.setText(file.read())
                 
             self.statusBar().showMessage("Opened " + fileName[0])
+            
+    def __onOpenFileDirect(self, path):
+        # utf-8 读取文件    
+         with open(path, "r", encoding="utf-8") as file:
+                self.edit.setText(file.read())
             
     def __onOpenFolder(self):
         folderName = QFileDialog.getExistingDirectory(self, "Open Folder", "")
