@@ -5,6 +5,7 @@ from PyQt5.QtGui import *
 from Edit import Edit
 from FileBrowser import FileBrowser
 from OutputWindow import OutputWindow
+from TerminalWindow import TerminalWindow
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -13,6 +14,7 @@ class MainWindow(QMainWindow):
         self.tabWidget = None
         self.edit = None
         self.outputWindow = None
+        self.terminalWindow = None
         
         self.__initMenuBar()
         self.__initUI()
@@ -167,6 +169,10 @@ class MainWindow(QMainWindow):
         # 输出窗口
         self.outputWindow = OutputWindow()
         self.addDockWidget(Qt.BottomDockWidgetArea, self.outputWindow)
+        
+        # 终端窗口
+        self.terminalWindow = TerminalWindow()
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.terminalWindow)
         
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
         self.setCorner(Qt.TopLeftCorner, Qt.LeftDockWidgetArea)
