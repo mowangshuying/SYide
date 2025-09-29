@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabWidget)
         
         # 创建第一个默认编辑器标签页
-        # self.createTab("Untitled")
+        self.createTab("Untitled")
         
         self.setWindowTitle("@SYide")
         self.resize(1000, 750)
@@ -78,6 +78,7 @@ class MainWindow(QMainWindow):
         :return: 新创建的编辑器实例
         """
         editor = Edit()
+        editor.breakpointToggled.connect(self.onBreakpointToggled)
         tabIndex = self.tabWidget.addTab(editor, title)
         self.tabWidget.setCurrentIndex(tabIndex)
         
@@ -104,6 +105,23 @@ class MainWindow(QMainWindow):
         :return: 当前编辑器实例
         """
         return self.tabWidget.currentWidget()
+        
+    def onBreakpointToggled(self, line, added):
+        """
+        处理断点切换事件
+        :param line: 行号
+        :param added: True表示添加断点，False表示删除断点
+        """
+        current_editor = self.getCurrentEditor()
+        file_name = "Untitled"
+        if hasattr(current_editor, 'filePath'):
+            file_name = current_editor.filePath
+            
+        if self.outputWindow:
+            if added:
+                self.outputWindow.appendInfo(f"Breakpoint added at line {line+1} in {file_name}")
+            else:
+                self.outputWindow.appendInfo(f"Breakpoint removed at line {line+1} in {file_name}")
         
     def openFileInTab(self, filePath):
         """

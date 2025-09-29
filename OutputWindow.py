@@ -58,3 +58,24 @@ class OutputWindow(QDockWidget):
         :return: 输出窗口中的文本内容
         """
         return self.outputText.toPlainText()
+        
+    def appendInfo(self, text):
+        """
+        追加信息级别的日志
+        :param text: 日志文本
+        """
+        self.appendText(f"[INFO] {text}")
+        
+    def appendError(self, text):
+        """
+        追加错误级别的日志
+        :param text: 错误文本
+        """
+        self.appendText(f"[ERROR] {text}")
+        
+    def appendDebug(self, text):
+        """
+        追加调试级别的日志
+        :param text: 调试文本
+        """
+        self.appendText(f"[DEBUG] {text}")
